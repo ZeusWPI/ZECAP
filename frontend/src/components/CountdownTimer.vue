@@ -4,11 +4,29 @@ import { basicSetup } from "codemirror";
 import { python } from "@codemirror/lang-python";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { Codemirror } from "vue-codemirror";
+import Cookies from 'js-cookie';
 
 const targetTime = ref<number | null>(null);
 const timeLeft = ref(0);
 const pythonCode = ref(""); // Stores the Python code
 const API_URL = 'api/countdown/';  // Django API URL
+const timeOptions = ref([30, 60, 90, 120]); // Time options in seconds
+const selectedTime = ref(timeOptions.value[1]); // Default to 60 seconds
+
+const username = ref('');
+
+function getUsername() {
+  return Cookies.get('username');
+}
+
+onMounted(() => {
+  const storedUsername = getUsername();
+  if (storedUsername) {
+    username.value = storedUsername;
+  }
+  fetchTargetTime();
+  setInterval(updateTimeLeft, 1000);
+});
 
 const fetchTargetTime = async () => {
     try {
@@ -40,12 +58,6 @@ const updateTimeLeft = () => {
     }
 };
 
-// Fetch data when component mounts
-onMounted(async () => {
-    await fetchTargetTime();
-    setInterval(updateTimeLeft, 1000);
-});
-
 // Restart countdown (sets new timestamp)
 const restartCountdown = async (seconds: number) => {
     const newTargetTime = Math.floor(Date.now() / 1000) + seconds;
@@ -65,22 +77,39 @@ watch(timeLeft, (newValue, oldValue) => {
         pythonCode.value = ""; // Clear input field
     }
 });
+
+// Function to format the time in MM:SS format
+const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = time % 60;
+    return `${String(minutes).padStart(2, '0')}m:${String(seconds).padStart(2, '0')}s`;
+};
 </script>
 
 <template>
-    <div class="timer">
-        <span>{{ String(Math.floor(timeLeft / 60)).padStart(2, '0') }}:{{ String(timeLeft % 60).padStart(2, '0') }}</span>
-    </div>
-    <button @click="restartCountdown(60)">Restart (60s)</button>
+    <div>
+        <p>Welcome, {{ username }}!</p>
+        <div class="timer">
+            <span>{{ String(Math.floor(timeLeft / 60)).padStart(2, '0') }}:{{ String(timeLeft % 60).padStart(2, '0') }}</span>
+        </div>
 
-    <!-- Python Code Input -->
-    <Codemirror
-        v-model="pythonCode"
-        :extensions="[basicSetup, python()]"
-        :disabled="timeLeft === 0"
-        :theme="oneDark"
-        class="code-editor"
-    />
+        <select id="time-select" v-model="selectedTime">
+                <option v-for="time in timeOptions" :key="time" :value="time">
+                    {{ formatTime(time) }}
+                </option>
+        </select>
+
+        <button @click="restartCountdown(selectedTime)">Restart ({{ formatTime(selectedTime) }})</button>
+
+        <!-- Python Code Input -->
+        <Codemirror
+            v-model="pythonCode"
+            :extensions="[basicSetup, python()]"
+            :disabled="timeLeft === 0"
+            :theme="oneDark"
+            class="code-editor"
+        />
+    </div>
 </template>
 
 <style scoped>
