@@ -3,14 +3,30 @@ import { ref, onMounted } from 'vue';
 
 const targetTime = ref<number | null>(null);
 const timeLeft = ref(0);
-const API_URL = 'http://localhost/countdown/';  // Django API URL
+const API_URL = 'http://localhost:8000/api/countdown/';  // Django API URL
 
 const fetchTargetTime = async () => {
-    const res = await fetch(`${API_URL}get/`);
-    const data = await res.json();
-    targetTime.value = data.target_time;
-    updateTimeLeft();
+    try {
+        console.log(`Fetching from: ${API_URL}get/`); // Log the URL
+
+        const res = await fetch(`${API_URL}get/`);
+
+        if (!res.ok) {
+            const errorText = await res.text(); // Read response in case of errors
+            throw new Error(`HTTP ${res.status}: ${errorText}`);
+        }
+
+        const data = await res.json();
+        console.log('Received data:', data); // Log the response data
+
+        targetTime.value = data.target_time;
+        updateTimeLeft();
+    } catch (error) {
+        console.error('Failed to fetch target time:', error);
+        alert(`Error fetching target time: ${error.message}`); // Display error in UI
+    }
 };
+
 
 const updateTimeLeft = () => {
     if (targetTime.value) {
