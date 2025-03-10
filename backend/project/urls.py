@@ -17,5 +17,7 @@ Including another URLconf
 from django.urls import include, path
 
 urlpatterns = [
-    path('countdown/', include('countdown.urls')),
+    path('api/', include([
+        path('countdown/', include('countdown.urls')),
+    ]))
 ]

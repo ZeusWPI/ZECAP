@@ -3,7 +3,7 @@ import { ref, onMounted } from 'vue';
 
 const targetTime = ref<number | null>(null);
 const timeLeft = ref(0);
-const API_URL = 'http://localhost:8000/api/countdown/';  // Django API URL
+const API_URL = 'api/countdown/';  // Django API URL
 
 const fetchTargetTime = async () => {
     try {
