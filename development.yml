@@ -1,4 +1,3 @@
-
 ############################# NETWORKS
 
 networks:
@@ -41,7 +40,6 @@ services:
       - 8080:8080
     volumes:
       - ${DATA_DIR}/nginx/nginx.dev.conf:/etc/nginx/nginx.conf:ro
-      - ${SSL_DIR}:/etc/nginx/ssl:ro
     depends_on:
       - backend
       - frontend
@@ -52,10 +50,9 @@ services:
     build:
       context: $BACKEND_DIR
       dockerfile: Dockerfile.dev
-    command: sh -c "./setup.sh; gunicorn --certfile=/etc/nginx/ssl/certificate.crt --keyfile=/etc/nginx/ssl/private.key project.wsgi:application --bind 0.0.0.0:8000"
+    command: sh -c "./setup.sh; gunicorn project.wsgi:application --bind 0.0.0.0:8000"
     volumes:
       - ${BACKEND_DIR}:/code
-      - ${DATA_DIR}/nginx/ssl:/etc/nginx/ssl:ro
 
   frontend:
     <<: *common-keys-bds

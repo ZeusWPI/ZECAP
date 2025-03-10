@@ -7,23 +7,23 @@ build=false
 # Arguments parsing
 while getopts ":bfc" opt; do
   case ${opt} in
-    b )
-      backend=true
-      ;;
-    f )
-      frontend=true
-      ;;
-    c )
-      build=true
-      ;;
-    : )
-      echo "Usage: $0 [-b] [-f] [-c]" 1>&2
-      exit 1
-      ;;
-    \? )
-      echo "Usage: $0 [-b] [-f] [-c]" 1>&2
-      exit 1
-      ;;
+  b)
+    backend=true
+    ;;
+  f)
+    frontend=true
+    ;;
+  c)
+    build=true
+    ;;
+  :)
+    echo "Usage: $0 [-b] [-f] [-c]" 1>&2
+    exit 1
+    ;;
+  \?)
+    echo "Usage: $0 [-b] [-f] [-c]" 1>&2
+    exit 1
+    ;;
   esac
 done
 
@@ -31,8 +31,8 @@ echo "Checking environment file..."
 
 # If clean build, remove .env and db.sqlite3
 if [ "$build" = true ]; then
-  rm .env > /dev/null 2>&1
-  rm -f backend/db.sqlite3 > /dev/null 2>&1
+  rm .env >/dev/null 2>&1
+  rm -f backend/db.sqlite3 >/dev/null 2>&1
 fi
 
 # Create environment file if it doesn't exist
@@ -41,20 +41,6 @@ if ! [ -f .env ]; then
   sed -i "s/^DJANGO_SECRET_KEY=.*/DJANGO_SECRET_KEY=totally_random_key_string/" .env
   sed -i "s,^DJANGO_ROOT_DIR=.*,DJANGO_ROOT_DIR=$PWD/backend," .env
   echo "Created environment file"
-fi
-
-# Generate SSL certificates if they don't exist
-echo "Checking for existing SSL certificates..."
-
-if [ ! -f "data/nginx/ssl/private.key" ] || [ ! -f "data/nginx/ssl/certificate.crt" ]; then
-  echo "Generating SSL certificates..."
-  sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-  -keyout data/nginx/ssl/private.key \
-  -out data/nginx/ssl/certificate.crt \
-  -subj "/C=BE/ST=/L=/O=/OU=/CN=" > /dev/null
-  echo "SSL certificates generated."
-else
-  echo "SSL certificates already exist, skipping generation."
 fi
 
 # Build Docker images
@@ -107,3 +93,4 @@ echo "Cleaning up..."
 docker-compose -f development.yml down
 
 echo "Done."
+

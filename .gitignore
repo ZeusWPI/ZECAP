@@ -3,7 +3,5 @@
 .idea
 .vscode
 
-data/*
-data/nginx/ssl/*
 data/postres*
 data/redis/*
