@@ -1,8 +1,13 @@
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, watch  } from 'vue';
+import { basicSetup } from "codemirror";
+import { python } from "@codemirror/lang-python";
+import { oneDark } from "@codemirror/theme-one-dark";
+import { Codemirror } from "vue-codemirror";
 
 const targetTime = ref<number | null>(null);
 const timeLeft = ref(0);
+const pythonCode = ref(""); // Stores the Python code
 const API_URL = 'api/countdown/';  // Django API URL
 
 const fetchTargetTime = async () => {
@@ -17,11 +22,11 @@ const fetchTargetTime = async () => {
         }
 
         const data = await res.json();
-        console.log('Received data:', data); // Log the response data
+        // console.log('Received data:', data); // Log the response data
 
         targetTime.value = data.target_time;
         updateTimeLeft();
-    } catch (error) {
+    } catch (error: any) {
         console.error('Failed to fetch target time:', error);
         alert(`Error fetching target time: ${error.message}`); // Display error in UI
     }
@@ -52,6 +57,14 @@ const restartCountdown = async (seconds: number) => {
     targetTime.value = newTargetTime;
     updateTimeLeft();
 };
+
+// Watch `timeLeft`, when it reaches 0, print and clear the input field
+watch(timeLeft, (newValue, oldValue) => {
+    if (oldValue > 0 && newValue === 0) {
+        console.log("Python Code Input at Timer End:", pythonCode.value);
+        pythonCode.value = ""; // Clear input field
+    }
+});
 </script>
 
 <template>
@@ -59,6 +72,15 @@ const restartCountdown = async (seconds: number) => {
         <span>{{ String(Math.floor(timeLeft / 60)).padStart(2, '0') }}:{{ String(timeLeft % 60).padStart(2, '0') }}</span>
     </div>
     <button @click="restartCountdown(60)">Restart (60s)</button>
+
+    <!-- Python Code Input -->
+    <Codemirror
+        v-model="pythonCode"
+        :extensions="[basicSetup, python()]"
+        :disabled="timeLeft === 0"
+        :theme="oneDark"
+        class="code-editor"
+    />
 </template>
 
 <style scoped>
@@ -83,4 +105,12 @@ button {
     border: none;
     cursor: pointer;
 }
+
+.code-editor {
+    width: 100%;
+    height: 200px;
+    border-radius: 5px;
+}
+
+
 </style>

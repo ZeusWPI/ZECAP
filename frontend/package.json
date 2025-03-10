@@ -29,6 +29,11 @@
     "@vue/tsconfig": "^0.7.0",
     "typescript": "~5.7.2",
     "vite": "^6.2.0",
-    "vue-tsc": "^2.2.4"
+    "vue-tsc": "^2.2.4",
+    "@codemirror/view": "^6.x.x",
+    "@codemirror/state": "^6.x.x",
+    "@codemirror/lang-python": "^6.x.x",
+    "@codemirror/theme-one-dark": "^6.x.x",
+    "vue-codemirror": "^6.x.x"
   }
 }
