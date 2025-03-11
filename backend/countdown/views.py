@@ -172,8 +172,9 @@ def start_session(request):
                 session.round = session.round + 1
                 session.save()
                 users_in_session = list(session.users.values_list('username', flat=True))
+                questions = Question.objects.filter(session=session)
 
-                if session.round == 2:
+                if len(questions) == 0:
                     questions = getQuestions(int(player_amount))
 
                     i = 0
