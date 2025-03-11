@@ -1,7 +1,7 @@
 from django.http import JsonResponse, HttpResponse
 
 from countdown.leetcode import getQuestions
-from countdown.models import Countdown, User, Session, Question  # Import Session model
+from countdown.models import Countdown, User, Session, Question, SessionUserQuestions  # Import Session model
 import json
 from django.shortcuts import render
 from django.utils.timezone import now
@@ -169,16 +169,28 @@ def start_session(request):
             session_name = data.get('session_name')
             player_amount = data.get('player_amount', 1)
 
-            if session_name and player_amount:
+            if session_name:
                 session = Session.objects.get(session_name=session_name)
-                questions = getQuestions(player_amount)
+                questions = getQuestions(int(player_amount))
+
+                users_in_session = list(session.users.values_list('username', flat=True))
+
+                i = 0
 
                 for question_text, code in questions:
-                    Question.objects.create(
+                    q = Question.objects.create(
                         question_text=question_text,
                         session=session,
                         code=code
                     )
+
+                    SessionUserQuestions.objects.create(
+                        current_session=session,
+                        user=User.objects.get(username=users_in_session[i]),
+                        latest_question=q
+                    )
+
+                    i+=1
 
                 session.busy = True
                 session.save()
@@ -188,6 +200,31 @@ def start_session(request):
                 return JsonResponse({'message': 'Session started successfully'}, status=200)
             else:
                 return JsonResponse({'error': 'Session ID is required'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+@csrf_exempt
+def get_question(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            session_name = data.get('session_name')
+            username = data.get('username')
+
+            if session_name and username:
+                session = Session.objects.get(session_name=session_name)
+                user = User.objects.get(username=username)
+                session_user_question = SessionUserQuestions.objects.get(current_session=session, user=user)
+                latest_question = session_user_question.latest_question
+
+                return JsonResponse({
+                    'question_text': latest_question.question_text,
+                    'code': latest_question.code
+                }, status=200)
+            else:
+                return JsonResponse({'error': 'Session name and username are required'}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
