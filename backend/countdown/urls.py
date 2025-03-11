@@ -16,4 +16,6 @@ urlpatterns = [
     path('startSession/', views.start_session, name='start_session'),
 
     path('getQuestion/', views.get_question, name='get_question'),
+
+    path('submitAnswer/', views.submit_answer, name='submit_answer'),
 ]

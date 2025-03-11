@@ -221,10 +221,31 @@ def get_question(request):
 
                 return JsonResponse({
                     'question_text': latest_question.question_text,
-                    'code': latest_question.code
+                    'code': latest_question.code,
+                    'question_id': latest_question.id
                 }, status=200)
             else:
                 return JsonResponse({'error': 'Session name and username are required'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+@csrf_exempt
+def submit_answer(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            question_id = data.get('question_id')
+            code = data.get('code')
+
+            if question_id and code:
+                question = Question.objects.get(id=question_id)
+                question.code = code
+                question.save()
+                return JsonResponse({'message': 'Code updated successfully'}, status=200)
+            else:
+                return JsonResponse({'error': 'Question ID and code are required'}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
