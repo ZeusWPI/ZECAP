@@ -9,7 +9,7 @@ class User(models.Model):
 class Session(models.Model):
     session_name = models.CharField(max_length=150, unique=True)
     users = models.ManyToManyField(User)
-    target_time = models.BigIntegerField()
+    target_time = models.BigIntegerField(default=0)
     session_User_Questions = models.ManyToManyField('SessionUserQuestions')
     round = models.IntegerField(default=1)
 
