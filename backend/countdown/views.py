@@ -89,8 +89,12 @@ def create_session(request):
 def list_sessions(request):
     if request.method == 'GET':
         try:
-            sessions = Session.objects.values_list('session_name', flat=True)
-            return JsonResponse({'sessions': list(sessions)}, status=200)
+            sessions = Session.objects.all()
+            session_map = {}
+            for session in sessions:
+                usernames = session.users.values_list('username', flat=True)
+                session_map[session.session_name] = list(usernames)
+            return JsonResponse({'sessions': list(session_map.keys()), 'sessionUsers': session_map}, status=200)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
@@ -100,15 +104,15 @@ def join_session(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            session_id = data.get('session_id')
+            session_name = data.get('session_name')
             username = data.get('username')
-            if session_id and username:
-                session = Session.objects.get(id=session_id)
+            if session_name and username:
+                session = Session.objects.get(session_name=session_name)
                 user = User.objects.get(username=username)
                 session.users.add(user)
                 return JsonResponse({'message': 'User joined session successfully'}, status=200)
             else:
-                return JsonResponse({'error': 'Session ID and username are required'}, status=400)
+                return JsonResponse({'error': 'Session name and username are required'}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
@@ -118,15 +122,15 @@ def leave_session(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            session_id = data.get('session_id')
+            session_name = data.get('session_name')
             username = data.get('username')
-            if session_id and username:
-                session = Session.objects.get(id=session_id)
+            if session_name and username:
+                session = Session.objects.get(session_name=session_name)
                 user = User.objects.get(username=username)
                 session.users.remove(user)
                 return JsonResponse({'message': 'User left session successfully'}, status=200)
             else:
-                return JsonResponse({'error': 'Session ID and username are required'}, status=400)
+                return JsonResponse({'error': 'Session name and username are required'}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
