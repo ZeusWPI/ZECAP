@@ -192,6 +192,7 @@ def start_session(request):
                             latest_question=q,
                             new_question=q
                         )
+                        
 
                         i+=1
 
@@ -224,6 +225,7 @@ def start_session(request):
                                 break
 
                     i = 0
+                    
                     while i < len(users_in_session):
                         for j in range(len(questions_data)):
                             if i >= len(users_in_session):
@@ -233,6 +235,7 @@ def start_session(request):
                                 current_session=session,
                                 user=User.objects.get(username=users_in_session[i])
                             )
+                            
                             session_user_question.latest_question = session_user_question.new_question
                             session_user_question.new_question = q
                             session_user_question.save()
@@ -259,7 +262,7 @@ def get_question(request):
                 session = Session.objects.get(session_name=session_name)
 
                 if session.target_time == 0:
-                    return JsonResponse({'error': 'Session has not started yet'}, status=200)
+                    return JsonResponse({'error': 'Session has not started yet'}, status=400)
 
                 user = User.objects.get(username=username)
                 session_user_question = SessionUserQuestions.objects.get(current_session=session, user=user)
