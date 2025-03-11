@@ -257,6 +257,10 @@ def get_question(request):
 
             if session_name and username:
                 session = Session.objects.get(session_name=session_name)
+
+                if session.target_time == 0:
+                    return JsonResponse({'error': 'Session has not started yet'}, status=200)
+
                 user = User.objects.get(username=username)
                 session_user_question = SessionUserQuestions.objects.get(current_session=session, user=user)
                 latest_question = session_user_question.latest_question
