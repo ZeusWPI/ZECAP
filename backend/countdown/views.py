@@ -1,9 +1,7 @@
 import random
 
 from django.http import JsonResponse, HttpResponse
-
-from countdown.leetcode import getQuestions
-from countdown.models import Countdown, User, Session, Question, SessionUserQuestions  # Import Session model
+from countdown.models import Countdown, User, Session  # Import Session model
 import json
 from django.shortcuts import render
 from django.utils.timezone import now
@@ -98,7 +96,7 @@ def list_sessions(request):
             for session in sessions:
                 usernames = session.users.values_list('username', flat=True)
                 session_map[session.session_name] = list(usernames)
-            return JsonResponse({'sessions': list(session_map.keys()), 'sessionUsers': session_map}, status=200)
+            return JsonResponse({'sessions': list(session_map.keys()), 'user_lists': session_map}, status=200)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
@@ -147,10 +145,6 @@ def remove_session(request):
             session_id = data.get('session_id')
             if session_id:
                 session = Session.objects.get(id=session_id)
-                session.delete()
-                return JsonResponse({'message': 'Session removed successfully'}, status=200)
-            else:
-                return JsonResponse({'error': 'Session ID is required'}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=405)

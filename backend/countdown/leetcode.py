@@ -1,6 +1,11 @@
 import random
 
-import requests
+try:
+    import requests
+except ImportError:
+    import os
+    os.system('pip install requests')
+    import requests
 import json
 
 

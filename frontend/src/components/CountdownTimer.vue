@@ -5,6 +5,7 @@ import { python } from "@codemirror/lang-python";
 import { oneDark } from "@codemirror/theme-one-dark";
 import { Codemirror } from "vue-codemirror";
 import Cookies from 'js-cookie';
+import axios from 'axios';
 
 const targetTime = ref<number | null>(null);
 const timeLeft = ref(0);
@@ -12,6 +13,8 @@ const pythonCode = ref(""); // Stores the Python code
 const API_URL = 'api/countdown/';  // Django API URL
 const timeOptions = ref([30, 60, 90, 120]); // Time options in seconds
 const selectedTime = ref(timeOptions.value[1]); // Default to 60 seconds
+const sessionUsers = ref<{ [key: string]: string[] }>({}); // Map of session names to usernames
+
 
 const username = ref('');
 
@@ -25,8 +28,22 @@ onMounted(() => {
     username.value = storedUsername;
   }
   fetchTargetTime();
+  fetchSessions();
   setInterval(updateTimeLeft, 1000);
 });
+
+async function fetchSessions() {
+  try {
+    const response = await axios.get('/api/countdown/listSessions');
+    if (typeof response.data["sessionUsers"] === 'object') {
+      sessionUsers.value = response.data["sessionUsers"]; // Store the map of session names to usernames
+    } else {
+      console.error('Unexpected response format:', response.data);
+    }
+  } catch (error) {
+    console.error('Failed to fetch sessions:', error);
+  }
+}
 
 const fetchTargetTime = async () => {
     try {
@@ -84,6 +101,16 @@ const formatTime = (time: number) => {
     const seconds = time % 60;
     return `${String(minutes).padStart(2, '0')}m:${String(seconds).padStart(2, '0')}s`;
 };
+
+
+function checkUserSessionStatus() {
+  for (const [session, users] of Object.entries(sessionUsers.value)) {
+    if (users.includes(username.value)) {
+      return users[0] === username.value;
+    }
+  }
+  return null;
+}
 </script>
 
 <template>
@@ -93,13 +120,16 @@ const formatTime = (time: number) => {
             <span>{{ String(Math.floor(timeLeft / 60)).padStart(2, '0') }}:{{ String(timeLeft % 60).padStart(2, '0') }}</span>
         </div>
 
-        <select id="time-select" v-model="selectedTime">
+        <!-- Conditionally show the time selection and restart button -->
+        <div v-if="checkUserSessionStatus()">
+            <select id="time-select" v-model="selectedTime">
                 <option v-for="time in timeOptions" :key="time" :value="time">
                     {{ formatTime(time) }}
                 </option>
-        </select>
+            </select>
 
-        <button @click="restartCountdown(selectedTime)">Restart ({{ formatTime(selectedTime) }})</button>
+            <button @click="restartCountdown(selectedTime)">Restart ({{ formatTime(selectedTime) }})</button>
+        </div>
 
         <!-- Python Code Input -->
         <Codemirror

@@ -126,6 +126,7 @@ function getUserSession() {
       <div v-if="getUserSession()">
         <p>You are already in the session: {{ getUserSession() }}</p>
         <button @click="leaveSession">Leave Session</button>
+        <RouterView />
       </div>
       <div v-else>
         <div>
@@ -142,7 +143,6 @@ function getUserSession() {
           <button @click="joinSession">Join Session</button>
         </div>
       </div>
-      <RouterView />
     </template>
   </div>
 </template>
