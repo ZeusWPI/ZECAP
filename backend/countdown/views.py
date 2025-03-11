@@ -1,3 +1,5 @@
+import random
+
 from django.http import JsonResponse, HttpResponse
 
 from countdown.leetcode import getQuestions
@@ -171,33 +173,65 @@ def start_session(request):
 
             if session_name:
                 session = Session.objects.get(session_name=session_name)
-                questions = getQuestions(int(player_amount))
-
                 users_in_session = list(session.users.values_list('username', flat=True))
 
-                i = 0
+                if session.round == 1:
+                    questions = getQuestions(int(player_amount))
 
-                for question_text, code in questions:
-                    q = Question.objects.create(
-                        question_text=question_text,
-                        session=session,
-                        code=code
-                    )
+                    i = 0
 
-                    SessionUserQuestions.objects.create(
-                        current_session=session,
-                        user=User.objects.get(username=users_in_session[i]),
-                        latest_question=q
-                    )
+                    for question_text, code in questions:
+                        q = Question.objects.create(
+                            question_text=question_text,
+                            session=session,
+                            code=code
+                        )
 
-                    i+=1
+                        SessionUserQuestions.objects.create(
+                            current_session=session,
+                            user=User.objects.get(username=users_in_session[i]),
+                            latest_question=q,
+                            new_question=q
+                        )
 
-                session.busy = True
-                session.save()
+                        i+=1
 
+                    session.busy = True
+                    session.save()
 
+                    return JsonResponse({'message': 'Session started successfully'}, status=200)
 
-                return JsonResponse({'message': 'Session started successfully'}, status=200)
+                else:
+                    # scramble the questions
+
+                    questions = Question.objects.filter(session=session)
+                    questions_data = [
+                        {
+                            'question_text': question.question_text,
+                            'code': question.code,
+                            'question_id': question.id
+                        }
+                        for question in questions
+                    ]
+                    original_questions_data = questions_data.copy()
+
+                    derangement = False
+                    while not derangement:
+                        derangement = True
+                        random.shuffle(questions_data)
+                        for i in range(len(questions_data)):
+                            if questions_data[i]['question_id'] == original_questions_data[i]['question_id']:
+                                derangement = False
+                                break
+
+                    for question in questions_data:
+                        q = Question.objects.get(id=question['question_id'])
+                        q.question_text = question['question_text']
+                        q.code = question['code']
+                        q.save()
+
+                    return JsonResponse({'error': 'Questions are scrambled'}, status=200)
+
             else:
                 return JsonResponse({'error': 'Session ID is required'}, status=400)
         except Exception as e:
