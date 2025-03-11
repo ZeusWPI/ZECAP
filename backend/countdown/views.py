@@ -166,12 +166,13 @@ def start_session(request):
             data = json.loads(request.body)
             session_name = data.get('session_name')
             player_amount = SessionUserQuestions.objects.filter(current_session=session_name).count()
-
             if session_name:
                 session = Session.objects.get(session_name=session_name)
+                session.round = session.round + 1
+                session.save()
                 users_in_session = list(session.users.values_list('username', flat=True))
 
-                if session.round == 1:
+                if session.round == 2:
                     questions = getQuestions(int(player_amount))
 
                     i = 0
@@ -235,7 +236,7 @@ def start_session(request):
                             session_user_question.save()
                             i += 1
 
-                    return JsonResponse({'error': 'Questions are scrambled'}, status=200)
+                    return JsonResponse({'message': 'Session started successfully'}, status=200)
 
             else:
                 return JsonResponse({'error': 'Session Name is required'}, status=400)
@@ -262,12 +263,14 @@ def get_question(request):
                     return JsonResponse({
                         'question_text': latest_question.question_text,
                         'code': latest_question.code,
-                        'question_id': latest_question.id
+                        'question_id': latest_question.id,
+                        'round': session.round
                     }, status=200)
                 else:
                     return JsonResponse({
                         'code': latest_question.code,
-                        'question_id': latest_question.id
+                        'question_id': latest_question.id,
+                        'round': session.round
                     }, status=200)
             else:
                 return JsonResponse({'error': 'Session name and username are required'}, status=400)
