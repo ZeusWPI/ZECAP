@@ -1,5 +1,7 @@
 from django.http import JsonResponse, HttpResponse
-from countdown.models import Countdown, User, Session  # Import Session model
+
+from countdown.leetcode import getQuestions
+from countdown.models import Countdown, User, Session, Question  # Import Session model
 import json
 from django.shortcuts import render
 from django.utils.timezone import now
@@ -153,3 +155,35 @@ def index(request):
 def countdown(request):
     # Your logic for the countdown view
     return render(request, 'countdown.html')
+
+
+@csrf_exempt
+def start_session(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            session_id = data.get('session_id')
+            player_amount = data.get('player_amount', 1)
+
+            if session_id:
+                session = Session.objects.get(id=session_id)
+                questions = getQuestions(player_amount)
+
+                for question_text, code in questions:
+                    Question.objects.create(
+                        question_text=question_text,
+                        session=session,
+                        code=code
+                    )
+
+                session.busy = True
+                session.save()
+
+
+
+                return JsonResponse({'message': 'Session started successfully'}, status=200)
+            else:
+                return JsonResponse({'error': 'Session ID is required'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)

@@ -12,4 +12,6 @@ urlpatterns = [
     path('removeSession/', views.remove_session, name='remove_session'),
     path('leaveSession/', views.leave_session, name='leave_session'),
     path('createSession/', views.create_session, name='create_session'),
+
+    path('startSession/', views.start_session, name='start_session'),
 ]
