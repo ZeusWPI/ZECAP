@@ -219,11 +219,17 @@ def get_question(request):
                 session_user_question = SessionUserQuestions.objects.get(current_session=session, user=user)
                 latest_question = session_user_question.latest_question
 
-                return JsonResponse({
-                    'question_text': latest_question.question_text,
-                    'code': latest_question.code,
-                    'question_id': latest_question.id
-                }, status=200)
+                if session.round == 1:
+                    return JsonResponse({
+                        'question_text': latest_question.question_text,
+                        'code': latest_question.code,
+                        'question_id': latest_question.id
+                    }, status=200)
+                else:
+                    return JsonResponse({
+                        'code': latest_question.code,
+                        'question_id': latest_question.id
+                    }, status=200)
             else:
                 return JsonResponse({'error': 'Session name and username are required'}, status=400)
         except Exception as e:
