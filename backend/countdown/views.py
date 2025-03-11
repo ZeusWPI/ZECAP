@@ -165,7 +165,8 @@ def start_session(request):
         try:
             data = json.loads(request.body)
             session_name = data.get('session_name')
-            player_amount = SessionUserQuestions.objects.filter(current_session=session_name).count()
+            session = Session.objects.get(session_name=session_name)
+            player_amount = SessionUserQuestions.objects.filter(current_session=session.id).count()
             if session_name:
                 session = Session.objects.get(session_name=session_name)
                 session.round = session.round + 1
@@ -288,7 +289,10 @@ def submit_answer(request):
             user_name = data.get('user_name')
             code = data.get('code')
 
-            question_id = SessionUserQuestions.objects.get(current_session=session_name, user=user_name).new_question.id
+            session = Session.objects.get(session_name=session_name)
+            user = User.objects.get(username=user_name)
+
+            question_id = SessionUserQuestions.objects.get(current_session=session, user=user).new_question.id
 
             if question_id and code:
                 question = Question.objects.get(id=question_id)
