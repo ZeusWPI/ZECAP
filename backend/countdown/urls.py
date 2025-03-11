@@ -18,4 +18,8 @@ urlpatterns = [
     path('getQuestion/', views.get_question, name='get_question'),
 
     path('submitAnswer/', views.submit_answer, name='submit_answer'),
+
+    path('getCurrentQuestions/', views.get_current_questions, name='get_current_questions'),
+
+    path('removeQuestionsFromSession/', views.remove_questions_from_session, name='remove_questions_from_session'),
 ]

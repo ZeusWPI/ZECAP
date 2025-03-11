@@ -1,7 +1,9 @@
 import random
 
 from django.http import JsonResponse, HttpResponse
-from countdown.models import Countdown, User, Session  # Import Session model
+
+from countdown.leetcode import getQuestions
+from countdown.models import Countdown, User, Session, SessionUserQuestions, Question  # Import Session model
 import json
 from django.shortcuts import render
 from django.utils.timezone import now
@@ -80,7 +82,7 @@ def create_session(request):
             session_name = data.get('session_name')
             if session_name:
                 session = Session.objects.create(session_name=session_name)
-                return JsonResponse({'message': 'Session created successfully', 'session_id': session.id}, status=200)
+                return JsonResponse({'message': 'Session created successfully', 'session_name': session.session_name}, status=200)
             else:
                 return JsonResponse({'error': 'Session name is required'}, status=400)
         except Exception as e:
@@ -142,9 +144,9 @@ def remove_session(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            session_id = data.get('session_id')
-            if session_id:
-                session = Session.objects.get(id=session_id)
+            session_name = data.get('session_name')
+            if session_name:
+                session = Session.objects.get(session_name=session_name)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
@@ -163,7 +165,7 @@ def start_session(request):
         try:
             data = json.loads(request.body)
             session_name = data.get('session_name')
-            player_amount = data.get('player_amount', 1)
+            player_amount = SessionUserQuestions.objects.filter(current_session=session_name).count()
 
             if session_name:
                 session = Session.objects.get(session_name=session_name)
@@ -218,16 +220,25 @@ def start_session(request):
                                 derangement = False
                                 break
 
-                    for question in questions_data:
-                        q = Question.objects.get(id=question['question_id'])
-                        q.question_text = question['question_text']
-                        q.code = question['code']
-                        q.save()
+                    i = 0
+                    while i < len(users_in_session):
+                        for j in range(len(questions_data)):
+                            if i >= len(users_in_session):
+                                break
+                            q = Question.objects.get(id=questions_data[j]['question_id'])
+                            session_user_question = SessionUserQuestions.objects.get(
+                                current_session=session,
+                                user=User.objects.get(username=users_in_session[i])
+                            )
+                            session_user_question.latest_question = session_user_question.new_question
+                            session_user_question.new_question = q
+                            session_user_question.save()
+                            i += 1
 
                     return JsonResponse({'error': 'Questions are scrambled'}, status=200)
 
             else:
-                return JsonResponse({'error': 'Session ID is required'}, status=400)
+                return JsonResponse({'error': 'Session Name is required'}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
@@ -270,8 +281,11 @@ def submit_answer(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            question_id = data.get('question_id')
+            session_name = data.get('session_name')
+            user_name = data.get('user_name')
             code = data.get('code')
+
+            question_id = SessionUserQuestions.objects.get(current_session=session_name, user=user_name).new_question.id
 
             if question_id and code:
                 question = Question.objects.get(id=question_id)
@@ -280,6 +294,51 @@ def submit_answer(request):
                 return JsonResponse({'message': 'Code updated successfully'}, status=200)
             else:
                 return JsonResponse({'error': 'Question ID and code are required'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+@csrf_exempt
+def get_current_questions(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            session_id = data.get('session_id')
+
+            if session_id:
+                session = Session.objects.get(id=session_id)
+                questions = Question.objects.filter(session=session)
+                questions_data = [
+                    {
+                        'code': question.code,
+                        'question_id': question.id
+                    }
+                    for question in questions
+                ]
+                return JsonResponse({'questions': questions_data}, status=200)
+            else:
+                return JsonResponse({'error': 'Session ID is required'}, status=400)
+        except Exception as e:
+            return JsonResponse({'error': str(e)}, status=500)
+    return JsonResponse({'error': 'Invalid request method'}, status=405)
+
+
+@csrf_exempt
+def remove_questions_from_session(request):
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            session_id = data.get('session_id')
+            question_ids = data.get('question_ids', [])
+
+            if session_id and question_ids:
+                session = Session.objects.get(id=session_id)
+                questions = Question.objects.filter(id__in=question_ids, session=session)
+                questions.delete()
+                return JsonResponse({'message': 'Questions removed successfully'}, status=200)
+            else:
+                return JsonResponse({'error': 'Session ID and question IDs are required'}, status=400)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
