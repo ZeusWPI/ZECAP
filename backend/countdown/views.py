@@ -10,14 +10,28 @@ from django.utils.timezone import now
 from django.views.decorators.csrf import csrf_exempt
 
 # View to get the current target_time
+@csrf_exempt
+@csrf_exempt
 def get_countdown(request):
     try:
-        countdown = Countdown.objects.first()  # Get the first countdown object
-        if not countdown:
-            # If no countdown exists, create one with the current UNIX timestamp
-            countdown = Countdown.objects.create(target_time=int(now().timestamp()))
+        data = json.loads(request.body)
+        session_name = data.get('session_name')
 
-        return JsonResponse({'target_time': countdown.target_time})
+        if not session_name:
+            return JsonResponse({'target_time': 0})
+        
+        if session_name == 0:
+            return JsonResponse({'target_time': 0})
+
+
+        session = Session.objects.get(session_name=session_name)
+
+        if not session.target_time:
+            # If no target_time exists, set it to the current UNIX timestamp
+            session.target_time = int(now().timestamp())
+            session.save()
+
+        return JsonResponse({'target_time': session.target_time})
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
@@ -29,20 +43,23 @@ def set_countdown(request):
             return JsonResponse({'error': 'Only POST method is allowed'}, status=405)
 
         data = json.loads(request.body)
+        session_name = data.get('session_name')
         target_time = data.get('target_time')
+
+        if not session_name:
+            return JsonResponse({'success': True, 'target_time': 0, 'no session_name given': 1})
+        
+        if session_name == 0:
+            return JsonResponse({'success': True, 'target_time': 0, 'no session_name given': 1})
 
         if not isinstance(target_time, int):
             return JsonResponse({'error': 'Invalid target_time, must be an integer'}, status=400)
 
-        countdown = Countdown.objects.first()
+        session = Session.objects.get(session_name=session_name)
+        session.target_time = target_time
+        session.save()
 
-        if countdown:
-            countdown.target_time = target_time
-        else:
-            countdown = Countdown.objects.create(target_time=target_time)
-
-        countdown.save()
-        return JsonResponse({'success': True, 'target_time': countdown.target_time})
+        return JsonResponse({'success': True, 'target_time': session.target_time})
 
     except json.JSONDecodeError:
         return JsonResponse({'error': 'Invalid JSON format'}, status=400)
@@ -98,7 +115,7 @@ def list_sessions(request):
             for session in sessions:
                 usernames = session.users.values_list('username', flat=True)
                 session_map[session.session_name] = list(usernames)
-            return JsonResponse({'sessions': list(session_map.keys()), 'user_lists': session_map}, status=200)
+            return JsonResponse({'sessions': list(session_map.keys()), 'sessionUsers': session_map}, status=200)
         except Exception as e:
             return JsonResponse({'error': str(e)}, status=500)
     return JsonResponse({'error': 'Invalid request method'}, status=405)
@@ -174,7 +191,7 @@ def start_session(request):
                 users_in_session = list(session.users.values_list('username', flat=True))
                 questions = Question.objects.filter(session=session)
 
-                if len(questions) == 0:
+                if session.round == 1:
                     questions = getQuestions(int(player_amount))
 
                     i = 0
@@ -293,7 +310,7 @@ def submit_answer(request):
             session = Session.objects.get(session_name=session_name)
             user = User.objects.get(username=user_name)
 
-            question_id = SessionUserQuestions.objects.get(current_session=session, user=user).new_question.id
+            question_id = SessionUserQuestions.objects.filter(current_session=session, user=user).first().new_question.id
 
             if question_id and code:
                 question = Question.objects.get(id=question_id)

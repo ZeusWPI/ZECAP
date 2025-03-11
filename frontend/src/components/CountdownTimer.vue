@@ -27,8 +27,8 @@ onMounted(() => {
   if (storedUsername) {
     username.value = storedUsername;
   }
-  fetchTargetTime();
-  fetchSessions();
+  setInterval(fetchTargetTime, 1000);
+  setInterval(fetchSessions, 1000);
   setInterval(updateTimeLeft, 1000);
 });
 
@@ -49,7 +49,11 @@ const fetchTargetTime = async () => {
     try {
         console.log(`Fetching from: ${API_URL}get/`); // Log the URL
 
-        const res = await fetch(`${API_URL}get/`);
+        const res = await fetch(`${API_URL}get/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ session_name: getUserSession() }) // Include session_name in the body
+        });
 
         if (!res.ok) {
             const errorText = await res.text(); // Read response in case of errors
@@ -77,11 +81,16 @@ const updateTimeLeft = () => {
 
 // Restart countdown (sets new timestamp)
 const restartCountdown = async (seconds: number) => {
+    await fetch(`${API_URL}startSession/`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({session_name: getUserSession()}),
+    });
     const newTargetTime = Math.floor(Date.now() / 1000) + seconds;
     await fetch(`${API_URL}set/`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ target_time: newTargetTime }),
+        body: JSON.stringify({ target_time: newTargetTime, session_name: getUserSession()}),
     });
     targetTime.value = newTargetTime;
     updateTimeLeft();
@@ -91,6 +100,31 @@ const restartCountdown = async (seconds: number) => {
 watch(timeLeft, (newValue, oldValue) => {
     if (oldValue > 0 && newValue === 0) {
         console.log("Python Code Input at Timer End:", pythonCode.value);
+        
+        // Send the Python code to the server
+        axios.post(`${API_URL}submitAnswer/`, {
+            session_name: getUserSession(),
+            user_name: username.value,
+            code: pythonCode.value
+        })
+        .then(response => {
+            console.log('Code submitted successfully:', response.data);
+        })
+        .catch(error => {
+            if (error.response) {
+                // Server responded with a status other than 200 range
+                console.error('Failed to submit code:', error.response.data);
+                console.error('Status:', error.response.status);
+                console.error('Headers:', error.response.headers);
+            } else if (error.request) {
+                // Request was made but no response received
+                console.error('No response received:', error.request);
+            } else {
+                // Something else happened while setting up the request
+                console.error('Error setting up request:', error.message);
+            }
+        });
+
         pythonCode.value = ""; // Clear input field
     }
 });
@@ -109,7 +143,16 @@ function checkUserSessionStatus() {
       return users[0] === username.value;
     }
   }
-  return null;
+  return 0;
+}
+
+function getUserSession() {
+  for (const [session, users] of Object.entries(sessionUsers.value)) {
+    if (users.includes(username.value)) {
+      return session;
+    }
+  }
+  return 0;
 }
 </script>
 
@@ -127,8 +170,9 @@ function checkUserSessionStatus() {
                     {{ formatTime(time) }}
                 </option>
             </select>
-
-            <button @click="restartCountdown(selectedTime)">Restart ({{ formatTime(selectedTime) }})</button>
+            <div v-if="timeLeft === 0">
+                <button @click="restartCountdown(selectedTime)">Start Round ({{ formatTime(selectedTime) }})</button>
+            </div>
         </div>
 
         <!-- Python Code Input -->
