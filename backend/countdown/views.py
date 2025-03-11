@@ -162,11 +162,11 @@ def start_session(request):
     if request.method == 'POST':
         try:
             data = json.loads(request.body)
-            session_id = data.get('session_id')
+            session_name = data.get('session_name')
             player_amount = data.get('player_amount', 1)
 
-            if session_id:
-                session = Session.objects.get(id=session_id)
+            if session_name and player_amount:
+                session = Session.objects.get(session_name=session_name)
                 questions = getQuestions(player_amount)
 
                 for question_text, code in questions:
